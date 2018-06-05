@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Hello React Google Map</title>
+    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script src="markerclusterer.js"></script>
+    <style>
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        class GoogleMapReact extends React.Component {
+            constructor(props) {
+                super(props);
+            }
+            componentDidMount() {
+                window.initMap = this.initMap.bind(this);
+                const gmapScriptEl = document.createElement('script');
+                gmapScriptEl.src = 'https://maps.googleapis.com/maps/api/js?key='+ this.props.mapKey +'&callback=initMap';
+                document.querySelector('body').insertAdjacentElement('beforeend', gmapScriptEl);
+            }
+            initMap() {
+                let _this = this;
+                let options = {};
+
+                if(this.props.mapStyle)
+                    options.styles = this.props.mapStyle;
+                //If not set zoom and center, will auto-zoom auto-center
+                if(this.props.mapZoom)
+                    options.zoom = this.props.mapZoom;
+                if(this.props.mapCenter)
+                    options.center = this.props.mapCenter;
+                var map = new google.maps.Map(this.refs.map, options);
+
+                var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                var bounds = new google.maps.LatLngBounds();
+                
+                var markers = [];
+                this.props.dataSet.forEach(function (data, i) {
+                    let location = _this.props.locationSelector(data);
+                    let title = _this.props.titleSelector(data);
+                    let marker = new google.maps.Marker({
+                        position: location,
+                        label: labels[i % labels.length],
+                        title: title
+                    });
+                    var loc = new google.maps.LatLng(marker.position.lat(), marker.position.lng());
+                    bounds.extend(loc);
+                    marker.addListener('click', function () {
+                        _this.props.markerClick(data);
+                    });
+                    markers.push(marker);
+                });
+
+                map.fitBounds(bounds);       //auto-zoom
+                map.panToBounds(bounds);     //auto-center
+                var markerCluster = new MarkerClusterer(map, markers,
+                    { imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m' }
+                );
+                markerCluster.addListener('clusterclick', function (cluster) {
+                    _this.props.markerClusterClick(cluster);
+                });
+            }
+            render() {
+                return <div ref='map' style={{ height: '600px', width: '100%' }} />
+            }
+        }
+        class Layout extends React.Component {
+            constructor(props) {
+                super(props);
+                this.locationSelector = this.locationSelector.bind(this);
+                this.titleSelector = this.titleSelector.bind(this);
+                this.markerClick = this.markerClick.bind(this);
+                this.markerClusterClick = this.markerClusterClick.bind(this);
+            }
+            markerClick(data){
+                alert(data.name);
+            }
+            markerClusterClick(cluster){
+                let markers = cluster.getMarkers();
+                markers.forEach(function (marker) {
+                    console.log(marker.title);
+                });
+            }
+            titleSelector(data){
+                return data.name;
+            }
+            locationSelector(data){
+                return {
+                    lat: Number(data.lat), lng: Number(data.lng)
+                };
+            }
+            render(){
+                let dataSet = [
+                    {name: 'AAAA', lat: "33.6848599", lng: "73.0004584"},
+                    {name: 'BBBB', lat: "34.0880025", lng: "-84.25380799999999"},
+                    {name: 'CCCC', lat: "33.3387306", lng: "-111.9550437"},
+                    {name: 'DDDD', lat: "53.9454845", lng: "-1.0748544"},
+                    {name: 'EEEE', lat: "25.0926283", lng: "55.1592011"}
+                ];
+                
+                let mapStyle = [
+                    {
+                        "featureType": "all",
+                        "elementType": "labels.text.fill",
+                        "stylers": [
+                            {
+                                "color": "#ffffff"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "all",
+                        "elementType": "labels.text.stroke",
+                        "stylers": [
+                            {
+                                "color": "#000000"
+                            },
+                            {
+                                "lightness": 13
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#000000"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "color": "#144b53"
+                            },
+                            {
+                                "lightness": 14
+                            },
+                            {
+                                "weight": 1.4
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "color": "#08304b"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi",
+                        "elementType": "geometry",
+                        "stylers": [
+                            {
+                                "color": "#0c4152"
+                            },
+                            {
+                                "lightness": 5
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#000000"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "color": "#0b434f"
+                            },
+                            {
+                                "lightness": 25
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.arterial",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#000000"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.arterial",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "color": "#0b3d51"
+                            },
+                            {
+                                "lightness": 16
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.local",
+                        "elementType": "geometry",
+                        "stylers": [
+                            {
+                                "color": "#000000"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "transit",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "color": "#146474"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "color": "#021019"
+                            }
+                        ]
+                    }
+                ];
+                return (
+                    <GoogleMapReact
+                        mapStyle={mapStyle}
+                        dataSet={dataSet}
+                        locationSelector={this.locationSelector}
+                        titleSelector={this.titleSelector}
+                        mapKey={yourMapApiKey}
+                        markerClick={this.markerClick}
+                        markerClusterClick={this.markerClusterClick} />
+                );
+            }
+        }
+		ReactDOM.render(
+			<Layout />,
+			document.getElementById('root')
+		);
+	</script>
+</body>
+
+</html>
